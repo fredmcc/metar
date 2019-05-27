@@ -33,6 +33,8 @@ char noaabuffer[METAR_MAXSIZE];
 /* command line args */
 int  decode=0;
 int  verbose=0;
+int  taf=0;
+int  tafOnly=0;
 
 char *strupc(char *line) {
    char *p;
@@ -48,7 +50,10 @@ void usage(char *name) {
 	printf("   -d        decode metar\n");
 	printf("   -h        show this help\n");
 	printf("   -v        be verbose\n");
+	printf("   -t        get TAF also\n");
+	printf("   -T        get TAF ONLY\n");
 	printf("Example: %s -d ehgr\n", name);
+	printf("Modified by Fred\n");
 }
 
 
@@ -87,6 +92,38 @@ int download_Metar(char *station) {
     curl_easy_setopt(curlhandle, CURLOPT_FOLLOWLOCATION, 1);
 	curl_easy_setopt(curlhandle, CURLOPT_WRITEFUNCTION, receiveData);
 	memset(noaabuffer, 0x0, METAR_MAXSIZE);
+
+	res = curl_easy_perform(curlhandle);
+	curl_easy_cleanup(curlhandle);
+
+    return 0;
+}
+/* fetch NOAA report */
+int download_Taf(char *station) {
+    CURL *curlhandle = NULL;
+	CURLcode res;
+    char url[URL_MAXSIZE];
+	char tmp[URL_MAXSIZE];
+
+    curlhandle = curl_easy_init();
+	if (!curlhandle) return 1;
+
+	memset(tmp, 0x0, URL_MAXSIZE);
+	if (getenv("TAFURL") == NULL) {
+		strncpy(tmp, TAFURL, URL_MAXSIZE);
+	} else {
+		strncpy(tmp, getenv("TAFURL"), URL_MAXSIZE);
+		if (verbose) printf("Using environment variable TAFURL: %s\n", tmp);
+	}
+
+    if (snprintf(url, URL_MAXSIZE, "%s/%s.TXT", tmp, strupc(station)) < 0) 
+        return 1;
+	if (verbose) printf("Retrieving URL %s\n", url);
+
+    curl_easy_setopt(curlhandle, CURLOPT_URL, url);
+    curl_easy_setopt(curlhandle, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(curlhandle, CURLOPT_WRITEFUNCTION, receiveData);
+	memset(noaabuffer, 0x0, TAF_MAXSIZE);
 
 	res = curl_easy_perform(curlhandle);
 	curl_easy_cleanup(curlhandle);
@@ -158,7 +195,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	while ((res = getopt(argc, argv, "hvd")) != -1) {
+	while ((res = getopt(argc, argv, "hvdtT")) != -1) {
 		switch (res) {
 			case '?':
 				usage(argv[0]);
@@ -174,6 +211,12 @@ int main(int argc, char* argv[]) {
 			case 'v':
 				verbose=1;
 				break;
+			case 't':
+				taf=1;
+				break;
+			case 'T':
+				tafOnly=1;
+				break;
 		}
 	}
     
@@ -184,16 +227,28 @@ int main(int argc, char* argv[]) {
 	memset(&noaa, 0x0, sizeof(noaa_t));
 
 	while (optind < argc) {
-		res = download_Metar(argv[optind++]);
-        if (res == 0) {
-			parse_NOAA_data(noaabuffer, &noaa);
-			printf("%s", noaa.report);
-			if (decode) {
-				parse_Metar(noaa.report, &metar);
-				decode_Metar(metar);
-			}
-		} else 
+		if(!tafOnly){
+			res = download_Metar(argv[optind]);
+	        	if ((res == 0) && (tafOnly == 0)) {
+				parse_NOAA_data(noaabuffer, &noaa);
+				printf("%s", noaa.report);
+				if (decode) {
+					parse_Metar(noaa.report, &metar);
+					decode_Metar(metar);
+				}
+			} else 
+				printf("Error: %d\n", res);
+		}
+		if (taf || tafOnly){
+			res = download_Taf(argv[optind]);
+			if (res == 0){
+				parse_NOAA_data(noaabuffer, &noaa);
+				printf("%s",noaa.report);
+			} else 
 			printf("Error: %d\n", res);
+
+		}
+		optind++;
 	}
     
     return 0;

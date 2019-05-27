@@ -22,9 +22,13 @@
 
 /* max size for a NOAA report */
 #define  METAR_MAXSIZE 512
+#define  TAF_MAXSIZE 512
 
 /* where to fetch reports */
+//#define  METARURL "http://weather.noaa.gov/pub/data/observations/metar/stations"
+//#define  TAFURL "http://weather.noaa.gov/pub/data/forecasts/taf/stations"
 #define  METARURL "https://tgftp.nws.noaa.gov/data/observations/metar/stations"
+#define  TAFURL "https://tgftp.nws.noaa.gov/data/forecasts/taf/stations"
 
 /* clouds */
 typedef struct {

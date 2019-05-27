@@ -201,7 +201,7 @@ static void analyse_token(char *token, metar_t *metar) {
 
 	// find wind
 	if ((int)metar->winddir == 0) {
-		if (regcomp(&preg, "^(VRB|[0-9]{3})([0-9]{2})(G[0-9]+)?(KT|MPS)$", 
+		if (regcomp(&preg, "^(VRB|[0-9]{3})([0-9]{2})(G[0-9]+)?(KT)$", 
 					REG_EXTENDED)) {
 			perror("parseMetar");
 			exit(errno);
@@ -378,8 +378,8 @@ static void analyse_token(char *token, metar_t *metar) {
 	}
 	if (!regexec(&preg, token, 5, pmatch, 0)) {
 		char *obs;
-		obs = malloc(100);
-		memset(obs, 0x0, 100);
+		obs = malloc(99);
+		memset(obs, 0x0, 99);
 
 		size=pmatch[1].rm_eo - pmatch[1].rm_so;
 		memset(tmp, 0x0, 99);
